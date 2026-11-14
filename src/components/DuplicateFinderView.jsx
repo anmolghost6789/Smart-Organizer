@@ -8,7 +8,8 @@ import {
   ShieldCheck,
   ExternalLink,
   Info,
-  X
+  X,
+  Crown
 } from 'lucide-react';
 
 export function DuplicateFinderView({ duplicates, onRevealPath, onDeleteDuplicates }) {
@@ -46,10 +47,6 @@ export function DuplicateFinderView({ duplicates, onRevealPath, onDeleteDuplicat
     setSelectedPaths(newSelected);
   }
 
-  function clearSelection() {
-    setSelectedPaths(new Set());
-  }
-
   function formatBytes(bytes) {
     if (!bytes || bytes === 0) return '0 B';
     const k = 1024;
@@ -71,37 +68,39 @@ export function DuplicateFinderView({ duplicates, onRevealPath, onDeleteDuplicat
   return (
     <div className="space-y-6">
       {/* Overview & Action Header */}
-      <div className="p-6 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-sm flex flex-wrap items-center justify-between gap-4">
+      <div className="p-6 sm:p-7 rounded-3xl bg-white/80 dark:bg-surface-dark-card/80 backdrop-blur-md border border-black/[0.05] dark:border-white/[0.06] shadow-soft flex flex-wrap items-center justify-between gap-4">
         <div className="space-y-1">
           <div className="flex items-center gap-3">
-            <h3 className="text-base font-semibold text-slate-900 dark:text-white">Duplicate Detection Engine</h3>
-            <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-500/15 text-amber-600 dark:text-amber-400">
+            <h3 className="text-base font-extrabold text-slate-900 dark:text-white font-display">
+              Strict Duplicate Detection
+            </h3>
+            <span className="px-3 py-1 rounded-full text-xs font-bold bg-pastel-butter-200/80 dark:bg-amber-950/60 text-amber-900 dark:text-amber-200 border border-amber-300/60">
               Recoverable: {duplicates?.formattedSavings || '0 B'}
             </span>
           </div>
           <p className="text-xs text-slate-500 dark:text-slate-400">
-            Multi-stage SHA-256 verification and 64-bit perceptual visual image similarity. Never deletes without explicit approval.
+            Filenames &amp; extensions compared first &bull; Verified via SHA-256 &bull; Zero automatic deletions
           </p>
         </div>
 
-        {/* Tab Switcher & Batch Action */}
+        {/* Tab Switcher & Batch Actions */}
         <div className="flex items-center gap-2">
-          <div className="flex p-1 rounded-xl bg-slate-100 dark:bg-slate-800 text-xs font-medium">
+          <div className="flex p-1 rounded-2xl bg-slate-100 dark:bg-white/[0.05] text-xs font-bold">
             <button
               onClick={() => setActiveTab('exact')}
-              className={`px-3 py-1.5 rounded-lg transition-all ${
+              className={`px-3.5 py-1.5 rounded-xl transition-all ${
                 activeTab === 'exact'
-                  ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-xs'
+                  ? 'bg-white dark:bg-surface-dark-card text-purple-700 dark:text-purple-300 shadow-soft-sm'
                   : 'text-slate-500 hover:text-slate-900 dark:hover:text-slate-200'
               }`}
             >
-              Exact Duplicates ({exactList.length})
+              Exact Sets ({exactList.length})
             </button>
             <button
               onClick={() => setActiveTab('similar')}
-              className={`px-3 py-1.5 rounded-lg transition-all ${
+              className={`px-3.5 py-1.5 rounded-xl transition-all ${
                 activeTab === 'similar'
-                  ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-xs'
+                  ? 'bg-white dark:bg-surface-dark-card text-purple-700 dark:text-purple-300 shadow-soft-sm'
                   : 'text-slate-500 hover:text-slate-900 dark:hover:text-slate-200'
               }`}
             >
@@ -111,7 +110,7 @@ export function DuplicateFinderView({ duplicates, onRevealPath, onDeleteDuplicat
 
           <button
             onClick={selectAllRedundant}
-            className="px-3 py-2 text-xs font-semibold rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 transition-colors"
+            className="px-4 py-2 text-xs font-bold rounded-2xl bg-slate-100 dark:bg-white/[0.05] hover:bg-slate-200 dark:hover:bg-white/[0.08] text-slate-700 dark:text-slate-200 transition-all btn-bounce"
           >
             Select Redundant
           </button>
@@ -119,7 +118,7 @@ export function DuplicateFinderView({ duplicates, onRevealPath, onDeleteDuplicat
           {selectedPaths.size > 0 && (
             <button
               onClick={() => setConfirmModalOpen(true)}
-              className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold rounded-xl bg-rose-600 hover:bg-rose-700 text-white shadow-sm shadow-rose-600/20 transition-all"
+              className="flex items-center gap-1.5 px-4 py-2 text-xs font-bold rounded-2xl bg-rose-500 hover:bg-rose-600 text-white shadow-soft transition-all btn-bounce animate-pulse"
             >
               <Trash2 className="w-3.5 h-3.5" />
               <span>Delete Selected ({selectedPaths.size})</span>
@@ -130,28 +129,36 @@ export function DuplicateFinderView({ duplicates, onRevealPath, onDeleteDuplicat
 
       {/* Duplicate Groups List */}
       {activeList.length === 0 ? (
-        <div className="py-20 text-center rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 space-y-2">
-          <CheckCircle2 className="w-10 h-10 text-emerald-500 mx-auto stroke-1" />
-          <h4 className="text-sm font-semibold text-slate-800 dark:text-slate-200">No {activeTab === 'exact' ? 'exact' : 'similar'} duplicates found</h4>
-          <p className="text-xs text-slate-400">All scanned files in this group are unique</p>
+        <div className="py-24 text-center rounded-3xl bg-white/70 dark:bg-surface-dark-card/70 border border-black/[0.05] dark:border-white/[0.06] space-y-3">
+          <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 text-emerald-600 flex items-center justify-center mx-auto">
+            <CheckCircle2 className="w-6 h-6" />
+          </div>
+          <h4 className="text-sm font-bold text-slate-900 dark:text-white font-display">
+            No {activeTab === 'exact' ? 'exact' : 'similar'} duplicates found
+          </h4>
+          <p className="text-xs text-slate-400">All filenames and SHA-256 hashes in this folder are unique</p>
         </div>
       ) : (
         <div className="space-y-4">
           {activeList.map((group, groupIdx) => (
             <div
               key={group.id}
-              className="rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-sm overflow-hidden"
+              className="rounded-3xl bg-white/80 dark:bg-surface-dark-card/80 border border-black/[0.05] dark:border-white/[0.06] shadow-soft overflow-hidden"
             >
               {/* Group Header */}
-              <div className="px-5 py-3 bg-slate-50/70 dark:bg-slate-800/40 border-b border-slate-200/60 dark:border-slate-800 flex items-center justify-between text-xs">
-                <div className="flex items-center gap-2">
-                  <span className="font-semibold text-slate-800 dark:text-slate-200">
-                    Duplicate Set #{groupIdx + 1}
+              <div className="px-6 py-3.5 bg-slate-50/70 dark:bg-white/[0.02] border-b border-black/[0.04] dark:border-white/[0.05] flex items-center justify-between text-xs">
+                <div className="flex items-center gap-2.5">
+                  <span className="font-bold text-slate-900 dark:text-white font-display">
+                    Set #{groupIdx + 1}
                   </span>
-                  <span className="text-slate-400">•</span>
+                  <span className="text-slate-400">&bull;</span>
+                  <span className="font-mono text-purple-600 dark:text-purple-400 font-semibold">
+                    {group.canonicalName || 'duplicate group'}
+                  </span>
+                  <span className="text-slate-400">&bull;</span>
                   <span className="font-mono text-slate-500">{group.files.length} copies</span>
                   {group.potentialSaving && (
-                    <span className="font-semibold text-amber-600 dark:text-amber-400">
+                    <span className="font-bold text-amber-600 dark:text-amber-400">
                       (Saves {formatBytes(group.potentialSaving)})
                     </span>
                   )}
@@ -165,44 +172,44 @@ export function DuplicateFinderView({ duplicates, onRevealPath, onDeleteDuplicat
               </div>
 
               {/* Group Files */}
-              <div className="divide-y divide-slate-100 dark:divide-slate-800/60 p-2">
+              <div className="divide-y divide-black/[0.04] dark:divide-white/[0.04] p-3 space-y-1">
                 {group.files.map((file) => {
                   const isChecked = selectedPaths.has(file.path);
 
                   return (
                     <div
                       key={file.id || file.path}
-                      className={`p-3 rounded-xl flex items-center justify-between gap-4 transition-colors ${
+                      className={`p-3.5 rounded-2xl flex items-center justify-between gap-4 transition-all ${
                         file.isRecommendedKeep
-                          ? 'bg-emerald-50/40 dark:bg-emerald-500/5 border border-emerald-500/20'
+                          ? 'bg-pastel-mint-50/60 dark:bg-emerald-950/20 border border-emerald-500/20'
                           : isChecked
-                          ? 'bg-rose-50/40 dark:bg-rose-500/5'
-                          : 'hover:bg-slate-50 dark:hover:bg-slate-800/30'
+                          ? 'bg-pastel-peach-50/70 dark:bg-rose-950/20 border border-rose-500/20'
+                          : 'hover:bg-slate-50 dark:hover:bg-white/[0.03]'
                       }`}
                     >
-                      <div className="flex items-center gap-3 flex-1 min-w-0">
-                        {/* Selection Checkbox */}
+                      <div className="flex items-center gap-3.5 flex-1 min-w-0">
+                        {/* Custom Checkbox */}
                         <input
                           type="checkbox"
                           checked={isChecked}
                           onChange={() => toggleFileSelection(file.path)}
-                          className="w-4 h-4 rounded text-sky-600 focus:ring-sky-500/30 cursor-pointer"
+                          className="w-4 h-4 rounded-lg text-purple-600 focus:ring-purple-400/40 cursor-pointer"
                         />
 
                         <div className="min-w-0 flex-1">
                           <div className="flex items-center gap-2">
-                            <span className="text-xs font-semibold text-slate-900 dark:text-white truncate">
+                            <span className="text-xs font-bold text-slate-900 dark:text-white truncate">
                               {file.name}
                             </span>
 
                             {file.isRecommendedKeep ? (
-                              <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
-                                <CheckCircle2 className="w-3 h-3" />
-                                Recommended to Keep
+                              <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 flex items-center gap-1 border border-emerald-300/50">
+                                <Crown className="w-3 h-3 text-amber-500 fill-amber-400" />
+                                Recommended Keeper
                               </span>
                             ) : (
-                              <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-slate-100 dark:bg-slate-800 text-slate-500">
-                                Duplicate Copy
+                              <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-slate-100 dark:bg-white/[0.05] text-slate-500">
+                                Redundant Copy
                               </span>
                             )}
                           </div>
@@ -220,10 +227,10 @@ export function DuplicateFinderView({ duplicates, onRevealPath, onDeleteDuplicat
                       </div>
 
                       <div className="flex items-center gap-4 text-xs font-mono">
-                        <span className="text-slate-500">{formatBytes(file.size)}</span>
+                        <span className="text-slate-500 font-semibold">{formatBytes(file.size)}</span>
                         <button
                           onClick={() => onRevealPath(file.path)}
-                          className="p-1.5 rounded-lg text-slate-400 hover:text-sky-600 dark:hover:text-sky-400 hover:bg-slate-100 dark:hover:bg-slate-800"
+                          className="p-1.5 rounded-xl text-slate-400 hover:text-purple-600 dark:hover:text-purple-300 hover:bg-slate-100 dark:hover:bg-white/[0.05] transition-colors"
                           title="Reveal in Explorer"
                         >
                           <ExternalLink className="w-3.5 h-3.5" />
@@ -238,49 +245,49 @@ export function DuplicateFinderView({ duplicates, onRevealPath, onDeleteDuplicat
         </div>
       )}
 
-      {/* Strict Confirmation Deletion Modal */}
+      {/* Strict Confirmation Deletion Modal with Gen-Z Aesthetic */}
       {confirmModalOpen && (
-        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="w-full max-w-lg bg-white dark:bg-slate-900 rounded-3xl p-6 shadow-2xl border border-slate-200 dark:border-slate-800 space-y-4">
-            <div className="flex items-start gap-3">
-              <div className="w-10 h-10 rounded-xl bg-rose-500/10 text-rose-600 dark:text-rose-400 flex items-center justify-center flex-shrink-0">
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="w-full max-w-lg bg-white dark:bg-surface-dark-card rounded-4xl p-7 shadow-soft-xl border border-black/[0.08] dark:border-white/[0.1] space-y-5 animate-fade-in">
+            <div className="flex items-start gap-3.5">
+              <div className="w-11 h-11 rounded-2xl bg-rose-500/10 text-rose-600 flex items-center justify-center flex-shrink-0">
                 <AlertTriangle className="w-5 h-5" />
               </div>
               <div>
-                <h3 className="text-sm font-semibold text-slate-900 dark:text-white">
-                  Confirm Duplicate Deletion
+                <h3 className="text-base font-bold text-slate-900 dark:text-white font-display">
+                  Confirm Duplicate Removal
                 </h3>
                 <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">
-                  You are about to delete <span className="font-semibold text-slate-800 dark:text-slate-200">{selectedPaths.size}</span> duplicate files. This will immediately reclaim <span className="font-semibold text-emerald-600 dark:text-emerald-400">{formatBytes(selectedBytes)}</span> of disk space.
+                  You are about to delete <span className="font-bold text-slate-900 dark:text-white">{selectedPaths.size}</span> verified redundant files. This will safely reclaim <span className="font-bold text-emerald-600 dark:text-emerald-400">{formatBytes(selectedBytes)}</span>.
                 </p>
               </div>
             </div>
 
             {/* Safe Trash Option */}
-            <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200/60 dark:border-slate-700/60">
-              <label className="flex items-start gap-2.5 cursor-pointer">
+            <div className="p-4 rounded-2xl bg-slate-50 dark:bg-white/[0.04] border border-black/[0.04] dark:border-white/[0.06]">
+              <label className="flex items-start gap-3 cursor-pointer">
                 <input
                   type="checkbox"
                   checked={moveToTrash}
                   onChange={(e) => setMoveToTrash(e.target.checked)}
-                  className="mt-0.5 w-4 h-4 rounded text-sky-600"
+                  className="mt-0.5 w-4 h-4 rounded text-purple-600"
                 />
                 <div className="text-xs">
-                  <span className="font-medium text-slate-800 dark:text-slate-200">
-                    Move to Local Recovery Trash (.desktopor_trash)
+                  <span className="font-bold text-slate-800 dark:text-slate-200">
+                    Move to Local Recovery Quarantine (.desktopor_trash)
                   </span>
                   <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
-                    Recommended for safety. Files are moved to a quarantine folder instead of permanent unlinking.
+                    Recommended for safety. Files can be recovered anytime from the quarantine folder.
                   </p>
                 </div>
               </label>
             </div>
 
             {/* Actions */}
-            <div className="pt-2 flex justify-end gap-2 text-xs font-semibold">
+            <div className="pt-2 flex justify-end gap-2.5 text-xs font-bold">
               <button
                 onClick={() => setConfirmModalOpen(false)}
-                className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300"
+                className="px-5 py-2.5 rounded-2xl bg-slate-100 hover:bg-slate-200 dark:bg-white/[0.06] dark:hover:bg-white/[0.1] text-slate-700 dark:text-slate-300 transition-colors btn-bounce"
               >
                 Cancel
               </button>
@@ -290,7 +297,7 @@ export function DuplicateFinderView({ duplicates, onRevealPath, onDeleteDuplicat
                   setConfirmModalOpen(false);
                   setSelectedPaths(new Set());
                 }}
-                className="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-white shadow-sm"
+                className="px-5 py-2.5 rounded-2xl bg-rose-500 hover:bg-rose-600 text-white shadow-soft transition-all btn-bounce"
               >
                 Confirm &amp; Delete
               </button>

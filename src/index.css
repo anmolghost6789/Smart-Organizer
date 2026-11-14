@@ -8,10 +8,28 @@
   }
 }
 
-/* Custom minimal scrollbar */
+/* Tactile micro-interactions */
+.btn-bounce {
+  transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.2s ease;
+}
+.btn-bounce:hover {
+  transform: translateY(-1.5px) scale(1.015);
+}
+.btn-bounce:active {
+  transform: translateY(0.5px) scale(0.975);
+}
+
+.card-hover {
+  transition: transform 0.28s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.28s ease, border-color 0.2s ease;
+}
+.card-hover:hover {
+  transform: translateY(-2px);
+}
+
+/* Custom aesthetic scrollbar */
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 7px;
+  height: 7px;
 }
 
 ::-webkit-scrollbar-track {
@@ -19,14 +37,19 @@
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(148, 163, 184, 0.4);
+  background: rgba(168, 145, 214, 0.35);
   border-radius: 9999px;
 }
 
 .dark ::-webkit-scrollbar-thumb {
-  background: rgba(71, 85, 105, 0.5);
+  background: rgba(147, 130, 190, 0.25);
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(100, 116, 139, 0.7);
+  background: rgba(168, 85, 247, 0.55);
+}
+
+/* Ambient glow utility */
+.ambient-glow {
+  background: radial-gradient(circle at 50% 0%, rgba(192, 132, 252, 0.12) 0%, transparent 60%);
 }
