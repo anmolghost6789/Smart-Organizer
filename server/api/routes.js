@@ -9,6 +9,7 @@ import { getOperationHistory, undoOperation } from '../core/recovery.js';
 import { DEFAULT_CATEGORIES } from '../core/categories.js';
 import { getDatabase } from '../core/database.js';
 import { isProtectedSystemPath } from '../core/installerManager.js';
+import { createUpdatesRouter } from './updates.js';
 
 export function createApiRouter(wsBroadcast) {
   const router = express.Router();
@@ -513,6 +514,9 @@ export function createApiRouter(wsBroadcast) {
       res.status(500).json({ error: err.message });
     }
   });
+
+  // 15. Mount Updates & Downloads Endpoints
+  router.use('/', createUpdatesRouter());
 
   return router;
 }

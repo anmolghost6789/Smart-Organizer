@@ -1,5 +1,5 @@
 import React from 'react';
-import { Sun, Moon, Play, FolderCheck, RefreshCw, FolderOpen } from 'lucide-react';
+import { Sun, Moon, Play, FolderCheck, RefreshCw, FolderOpen, Globe, DownloadCloud } from 'lucide-react';
 
 export function Header({
   currentTabTitle,
@@ -9,8 +9,10 @@ export function Header({
   setScanPath,
   onStartScan,
   onOpenOrganizeModal,
+  onOpenLanding,
   scanStatus,
-  stats
+  stats,
+  updateAvailable
 }) {
   return (
     <header className="h-16 px-6 border-b border-slate-200/80 dark:border-slate-800 bg-white/70 dark:bg-slate-900/70 backdrop-blur-md flex items-center justify-between z-10">
@@ -22,9 +24,28 @@ export function Header({
             Scanning in progress...
           </span>
         )}
+        {updateAvailable && (
+          <button
+            onClick={onOpenLanding}
+            className="flex items-center gap-1.5 px-2.5 py-1 text-[11px] font-semibold text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-500/15 rounded-full border border-amber-300 dark:border-amber-500/30 hover:bg-amber-100 transition-colors"
+          >
+            <DownloadCloud className="w-3.5 h-3.5" />
+            <span>Update v1.2.0 Available</span>
+          </button>
+        )}
       </div>
 
       <div className="flex items-center gap-3">
+        {/* Switch to Public Portal & Downloads */}
+        <button
+          onClick={onOpenLanding}
+          className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white bg-slate-100 dark:bg-slate-800/80 hover:bg-slate-200 rounded-xl transition-all"
+          title="View Product Website & Platform Installers"
+        >
+          <Globe className="w-3.5 h-3.5 text-sky-500" />
+          <span>Product Website</span>
+        </button>
+
         {/* Target Folder Input */}
         <div className="relative flex items-center">
           <input
@@ -32,7 +53,7 @@ export function Header({
             value={scanPath}
             onChange={(e) => setScanPath(e.target.value)}
             placeholder="Folder path to scan (e.g. D:\Downloads)"
-            className="w-72 pl-8 pr-3 py-1.5 text-xs rounded-xl bg-slate-100 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700/80 text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-sky-500/30"
+            className="w-64 pl-8 pr-3 py-1.5 text-xs rounded-xl bg-slate-100 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700/80 text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-sky-500/30"
           />
           <FolderOpen className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 pointer-events-none" />
         </div>

@@ -7,7 +7,10 @@ import {
   FolderTree,
   Database,
   Sliders,
-  CheckCircle2
+  CheckCircle2,
+  RefreshCw,
+  Download,
+  AlertCircle
 } from 'lucide-react';
 
 export function SettingsView({
@@ -20,10 +23,25 @@ export function SettingsView({
   const [newRulePattern, setNewRulePattern] = useState('');
   const [newRuleCategory, setNewRuleCategory] = useState('Documents');
   const [ruleMessage, setRuleMessage] = useState(null);
+  const [updateInfo, setUpdateInfo] = useState(null);
+  const [checkingUpdate, setCheckingUpdate] = useState(false);
 
   useEffect(() => {
     fetchRules();
+    checkUpdate();
   }, []);
+
+  async function checkUpdate() {
+    try {
+      setCheckingUpdate(true);
+      const res = await fetch('/api/updates/check?version=1.2.0');
+      const json = await res.json();
+      setUpdateInfo(json);
+    } catch {
+    } finally {
+      setCheckingUpdate(false);
+    }
+  }
 
   async function fetchRules() {
     try {
@@ -208,6 +226,54 @@ export function SettingsView({
                 </div>
               </div>
             ))}
+          </div>
+        )}
+      </div>
+
+      {/* Secure Auto-Updates & Version Manifest */}
+      <div className="p-6 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-sm space-y-4">
+        <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
+          <div className="flex items-center gap-2">
+            <RefreshCw className="w-4 h-4 text-sky-600" />
+            <h4 className="text-sm font-semibold text-slate-800 dark:text-slate-200">Application Updates &amp; Release Channel</h4>
+          </div>
+          <button
+            onClick={checkUpdate}
+            disabled={checkingUpdate}
+            className="flex items-center gap-1.5 px-3 py-1 text-xs font-semibold rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 transition-colors"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${checkingUpdate ? 'animate-spin' : ''}`} />
+            <span>Check for Updates</span>
+          </button>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
+          <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/50">
+            <span className="text-slate-400 block">Installed Version</span>
+            <span className="font-bold text-slate-900 dark:text-white">v1.2.0 (Build 1204)</span>
+          </div>
+
+          <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/50">
+            <span className="text-slate-400 block">Release Channel</span>
+            <span className="font-semibold text-emerald-600 dark:text-emerald-400">Stable (RSA-4096 Signed)</span>
+          </div>
+
+          <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/50">
+            <span className="text-slate-400 block">Update Status</span>
+            <span className="font-semibold text-slate-700 dark:text-slate-300">
+              {updateInfo?.updateAvailable ? 'Update Available!' : 'Up to date'}
+            </span>
+          </div>
+        </div>
+
+        {updateInfo?.releaseNotes && (
+          <div className="space-y-2 pt-2">
+            <span className="text-xs font-semibold text-slate-700 dark:text-slate-300">Current Release Highlights</span>
+            <ul className="text-xs text-slate-500 space-y-1 list-disc list-inside">
+              {updateInfo.releaseNotes.map((note, i) => (
+                <li key={i}>{note}</li>
+              ))}
+            </ul>
           </div>
         )}
       </div>

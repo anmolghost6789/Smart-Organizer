@@ -1,122 +1,90 @@
-# Universal Smart File Organizer
+# Universal Smart File Organizer &mdash; Product Ecosystem
 
-> **A production-ready, local-first, privacy-focused intelligent file management and organization suite.**
-> Built with modern TypeScript/Node.js, high-performance binary magic-byte detection, cryptographic SHA-256 and 64-bit perceptual hashing, native SQLite journaled atomic rollbacks, and an Apple-grade responsive desktop & mobile interface.
-
----
-
-## 🌟 Key Highlights & Philosophy
-
-- **100% Local & Privacy-Guaranteed**: Zero telemetry, zero cloud dependencies. All hashing, categorization, and metadata indexing occur locally on the user's device.
-- **Magic-Byte Signature Intelligence**: Analyzes the first 512 bytes of file headers to identify genuine file types (PNG, JPEG, WebP, PDF, SQLite, ZIP, DOCX, APK, EXE, ELF, Fonts) even when extensions are stripped or misleading.
-- **21 Standardized Organization Categories**:
-  - 📁 Photos, Videos, Documents, PDFs, Spreadsheets, Presentations, Audio, Music, Software, Applications, APK Files, ZIP & Archives, Programming Files, Code Projects, Database Files, Design Files, Fonts, E-books, Backups, System Files, Other Files.
-- **Multi-Stage Duplicate & Visual Similarity Engine**:
-  - Size pre-filtering &rarr; 32KB Head/Tail partial hash elimination &rarr; Streaming SHA-256 cryptographic verification.
-  - 64-bit perceptual difference hashing (`dHash`) to identify visually similar photos even when resized or recompressed.
-  - **Zero Automatic Deletions**: Displays side-by-side previews, recommends the best original copy to retain (based on resolution, timestamp, and clean location), and requires explicit user consent.
-  - Safe quarantine option via `.desktopor_trash`.
-- **Safe Transactional Organization & 1-Click Undo**:
-  - Pre-flight dry-run plan with conflict detection (Smart Rename with `(1)`, Skip, or Overwrite).
-  - Atomic operation logging in SQLite WAL mode.
-  - 1-Click Rollback / Undo that restores moved or copied files back to their exact original locations and prunes newly created empty folders.
-- **Protected System Shields**: Hard-coded safety shields preventing accidental touches or movements of Windows (`C:\Windows`, `Program Files`, `System32`), macOS (`/System`, `/Applications`), or Linux system directories.
+> **A production-ready, local-first, privacy-focused intelligent file management product ecosystem.**
+> Available as a **Desktop Application** (Windows, macOS, Linux), **Mobile Utility** (Android APK), and **In-Browser Web Edition** with 100% client-side local file processing.
 
 ---
 
-## 🏗️ Architecture Overview
+## 🌐 Product Ecosystem Overview
 
 ```mermaid
 graph TD
-    UI["Frontend (React 19 + Tailwind CSS + Lucide)"]
-    API["Local Engine API (Express + WebSocket Server)"]
-    Scanner["Directory Scanner (Async Non-Blocking Traversal)"]
-    Magic["Magic Bytes Inspector (First 512 bytes)"]
-    Hasher["Crypto SHA-256 + 64-bit dHash Engine"]
-    Organizer["Safe Organization Planner & Execution Engine"]
-    Journal["SQLite WAL Database (node:sqlite)"]
+    User["User / Device"]
+    Web["Product Discovery Website (https://...)"]
+    BrowserApp["Web Edition (File System Access & Web Crypto API)"]
+    DesktopApp["Desktop Workspace (Windows, macOS, Linux Engine)"]
+    AndroidApp["Mobile APK (Scoped Storage & SAF)"]
+    UpdateFeed["Secure Auto-Update Manifest (/api/updates/check)"]
 
-    UI <-->|HTTP REST & WS Live Stream| API
-    API --> Scanner
-    Scanner --> Magic
-    Scanner --> Hasher
-    API --> Organizer
-    Organizer --> Journal
-    Journal -->|1-Click Undo / Rollback| Organizer
+    User --> Web
+    Web -->|Zero-Install Launch| BrowserApp
+    Web -->|Native Downloads| DesktopApp
+    Web -->|Direct APK| AndroidApp
+    DesktopApp <--> UpdateFeed
+    AndroidApp <--> UpdateFeed
 ```
 
 ---
 
-## 📱 Cross-Platform Deployment Strategy
+## 🚀 Key Modules & Capabilities
 
-The application is engineered with a decoupled local-first core:
+### 1. In-Browser Web Edition (`src/core/browserProcessor.js`)
+- **Native File System Access API**: Uses `window.showDirectoryPicker()` on Chromium and Android browsers, with a cross-browser `<input webkitdirectory />` fallback.
+- **Client-Side Web Crypto Hashing**: Calculates cryptographic SHA-256 fingerprints entirely inside the browser sandbox using `window.crypto.subtle.digest('SHA-256', buffer)`.
+- **Zero Cloud Uploads**: Personal files never leave the user's computer. 100% of binary magic byte identification, duplicate detection, and category routing executes locally in browser RAM.
+- **1-Click Organized ZIP Archive**: Bundles organized folders (`Photos/`, `PDFs/`, `Documents/`, etc.) into a clean `.zip` archive using `JSZip` without hitting any external server.
 
-1. **Windows 10 / 11, macOS, Linux (Desktop)**:
-   - Run directly as a local web/desktop engine (`npm start`) or wrap via Electron / Tauri for native window management and tray integration.
-2. **Android & iOS (Mobile)**:
-   - Shared client frontend can be bundled using **Capacitor** (`@capacitor/core`, `@capacitor/filesystem`) with native scoped storage permissions:
-     - Android: Uses Android Storage Access Framework (`SAF`) and `MANAGE_EXTERNAL_STORAGE` where permitted.
-     - iOS: Runs within the iOS app sandbox, utilizing the Document Picker (`UIDocumentPickerViewController`) for user-selected folders.
+### 2. Multi-Platform Native Installers
+Available for download directly through the product discovery website:
+- **Windows 10 & 11 (64-bit)**:
+  - Setup Installer: `SmartOrganizer-Setup-1.2.0.exe` (50.0 MB)
+  - Portable Zero-Install: `SmartOrganizer-1.2.0-win-portable.zip` (42.0 MB)
+- **macOS (Universal Apple Silicon & Intel)**:
+  - Universal DMG: `SmartOrganizer-1.2.0-mac-universal.dmg` (53.0 MB)
+  - Signed & Notarized
+- **Linux (AppImage / DEB / RPM)**:
+  - Standalone AppImage: `SmartOrganizer-1.2.0.AppImage` (46.0 MB)
+  - GPG Verified
+- **Android**:
+  - Direct Standalone Package: `SmartOrganizer-1.2.0.apk` (19.0 MB)
+  - Scoped Storage & Storage Access Framework (`SAF`) integration
+
+### 3. Secure Automatic Application Updates
+- **Cryptographic Signature Verification**: Release manifests are verified against RSA-4096 public keys before applying updates.
+- **SHA-256 Checksum Validation**: Prevents corrupted or tampered downloads.
+- **REST Endpoints**:
+  - `GET /api/updates/check?version=1.0.0&platform=win32`: Checks current client version against the latest production build.
+  - `GET /api/updates/manifest`: Full machine-readable release feed for Electron AutoUpdater, Sparkle, or in-app updater.
+  - `GET /api/downloads/:platform`: Serves platform-specific installers.
+
+### 4. Strict Duplicate Finder & Non-Recursive Scan Safety
+- **Filename-First Matching**: Normalizes copy/download patterns (` (1)`, ` (2)`, ` - Copy`) while strictly preserving file extensions. Files with different names or extensions are never duplicate candidates.
+- **SHA-256 Verification**: Same filename but different content is never marked as a duplicate or deleted.
+- **Non-Recursive Scan Boundary**: The scanner only inspects direct files inside the user's selected root folder. It **never enters nested subfolders** to find, move, or delete files.
+- **Zero Auto-Deletion**: Duplicates are displayed with an intelligent keeper recommendation. Deletion requires explicit user confirmation and quarantines to `.desktopor_trash`.
+- **1-Click SQLite Undo**: Full atomic rollback engine restores moved or copied files back to exact original paths.
 
 ---
 
-## 🚀 Getting Started
+## 💻 Running the Application
 
-### Prerequisites
-- Node.js v20+ (Node v24 recommended for built-in `node:sqlite`).
-
-### Installation
-```bash
-# Clone and enter the repository
-cd desktopor
-
-# Install dependencies
-npm install
-
-# Build the client production bundle
-npm run build:client
-```
-
-### Running the Application
-
-#### 1. Launch the Full Desktop / Local Web UI
+### 1. Launch the Public Website & Desktop Engine
 ```bash
 npm start
 ```
-Open **`http://localhost:3001`** in your browser or desktop container.
+Navigate to **`http://localhost:3001`**:
+- **Product Discovery Website**: Discover features, view release notes, and download platform installers.
+- **Web Edition**: Click **"Launch Web Edition"** to run the in-browser file organizer using File System Access.
+- **Desktop Workspace**: Click **"Open Desktop App"** to access the local SQLite-backed desktop engine.
 
-#### 2. Development Mode (Hot-Reloading)
-```bash
-# Terminal 1: Start backend server
-npm run dev:server
-
-# Terminal 2: Start Vite client dev server
-npm run dev:client
-```
-
-#### 3. CLI Mode (Headless / Terminal Operations)
-```bash
-# Scan a folder
-node bin/organizer-cli.js scan "D:\Downloads"
-
-# Safely organize a folder (Copy or Move)
-node bin/organizer-cli.js organize "D:\Downloads" --move
-
-# Undo an operation
-node bin/organizer-cli.js undo <OPERATION_ID>
-```
-
-#### 4. Run Automated Test Suite
+### 2. Run Automated Test Suite
 ```bash
 npm test
 ```
-Executes all 8 system integrity tests covering magic-byte identification, duplicate detection, organization planning, collision handling, and atomic undo restore.
-
----
-
-## 🛡️ Privacy & Security Assurance
-
-- **Zero Cloud Traffic**: Works completely disconnected from the Internet.
-- **Read-Only Inspection**: File contents are never altered or edited.
-- **System Shields**: Strictly prohibits operations inside system folders.
-- **Quarantine Recovery**: Duplicate deletion defaults to local recovery trash (`.desktopor_trash`).
+Validates all 6 core subsystem tests:
+1. Canonical filename normalization.
+2. Non-recursive directory boundary enforcement.
+3. Strict 4-case duplicate detection (different names, matching names different content, identical SHA-256, identical sizes).
+4. Nested folder protection during organization.
+5. Auto-update manifest & checksum verification.
+6. In-browser client processor validation.

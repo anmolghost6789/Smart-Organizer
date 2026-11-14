@@ -9,8 +9,17 @@ import { StorageAnalysisView } from './components/StorageAnalysisView';
 import { HistoryView } from './components/HistoryView';
 import { SettingsView } from './components/SettingsView';
 import { OrganizeModal } from './components/OrganizeModal';
+import { LandingPageView } from './components/LandingPageView';
+import { BrowserOrganizerView } from './components/BrowserOrganizerView';
 
 export default function App() {
+  const [appView, setAppView] = useState(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('view') === 'desktop') return 'desktop-app';
+    if (params.get('view') === 'web') return 'web-app';
+    return 'landing'; // Landing discovery portal by default
+  });
+
   const [currentTab, setTab] = useState('dashboard');
   const [theme, setTheme] = useState(() => localStorage.getItem('theme') || 'dark');
   const [scanPath, setScanPath] = useState('');
@@ -23,6 +32,7 @@ export default function App() {
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [isOrganizeModalOpen, setOrganizeModalOpen] = useState(false);
   const [toastMessage, setToastMessage] = useState(null);
+  const [updateAvailable, setUpdateAvailable] = useState(false);
 
   const [organizeConfig, setOrganizeConfig] = useState({
     folderName: 'Smart Organizer',
@@ -47,6 +57,14 @@ export default function App() {
     fetchCategories();
     fetchFiles();
     fetchDuplicates();
+
+    // Check for updates
+    fetch('/api/updates/check?version=1.0.0')
+      .then(res => res.json())
+      .then(data => {
+        if (data.updateAvailable) setUpdateAvailable(true);
+      })
+      .catch(() => {});
 
     // Default scanPath: try getting cwd or sample
     if (!scanPath) {
@@ -197,6 +215,29 @@ export default function App() {
     settings: 'Settings'
   };
 
+  // View Mode 1: Public Marketing & Downloads Website
+  if (appView === 'landing') {
+    return (
+      <LandingPageView
+        onLaunchApp={() => setAppView('desktop-app')}
+        onLaunchWebMode={() => setAppView('web-app')}
+        theme={theme}
+        setTheme={setTheme}
+      />
+    );
+  }
+
+  // View Mode 2: In-Browser Web Edition (Local File System API)
+  if (appView === 'web-app') {
+    return (
+      <BrowserOrganizerView
+        onBackToLanding={() => setAppView('landing')}
+        onOpenDesktopApp={() => setAppView('desktop-app')}
+      />
+    );
+  }
+
+  // View Mode 3: Desktop Engine Workspace
   return (
     <div className="flex h-screen w-screen overflow-hidden bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-100 font-sans">
       {/* Sidebar */}
@@ -213,8 +254,10 @@ export default function App() {
           setScanPath={setScanPath}
           onStartScan={handleStartScan}
           onOpenOrganizeModal={() => setOrganizeModalOpen(true)}
+          onOpenLanding={() => setAppView('landing')}
           scanStatus={scanStatus}
           stats={stats}
+          updateAvailable={updateAvailable}
         />
 
         {/* Dynamic View Container */}
@@ -298,7 +341,7 @@ export default function App() {
 
       {/* Toast Notification */}
       {toastMessage && (
-        <div className="fixed bottom-6 right-6 z-50 px-4 py-3 rounded-2xl bg-slate-900 dark:bg-white text-white dark:text-slate-900 text-xs font-semibold shadow-2xl animate-fade-in flex items-center gap-2">
+        <div className="fixed bottom-6 right-6 z-50 px-4 py-3 rounded-2xl bg-slate-900 dark:bg-white text-white dark:text-slate-900 text-xs font-semibold shadow-2xl flex items-center gap-2">
           <span>{toastMessage}</span>
         </div>
       )}
