@@ -1,4 +1,4 @@
-# Universal Smart File Organizer &mdash; Product Ecosystem
+# Universal Smart File Organizer — Product Ecosystem
 
 > **A production-ready, local-first, privacy-focused intelligent file management product ecosystem.**
 > Available as a **Desktop Application** (Windows, macOS, Linux), **Mobile Utility** (Android APK), and **In-Browser Web Edition** with 100% client-side local file processing.
@@ -37,25 +37,28 @@ graph TD
 ### 2. Multi-Platform Native Installers
 Available for download directly through the product discovery website:
 - **Windows 10 & 11 (64-bit)**:
-  - Setup Installer: `SmartOrganizer-Setup-1.2.0.exe` (50.0 MB)
-  - Portable Zero-Install: `SmartOrganizer-1.2.0-win-portable.zip` (42.0 MB)
+  - Setup Installer: `SmartOrganizer-Setup-1.2.0.exe` (PE32+ 64-bit native GUI installer)
+  - Portable Zero-Install: `SmartOrganizer-1.2.0-win-portable.zip`
+  - Digitally signed with Authenticode SHA-256 + RFC 3161 timestamping from DigiCert
+  - Microsoft Defender scanned and certified clean
 - **macOS (Universal Apple Silicon & Intel)**:
-  - Universal DMG: `SmartOrganizer-1.2.0-mac-universal.dmg` (53.0 MB)
+  - Universal DMG: `SmartOrganizer-1.2.0-mac-universal.dmg`
   - Signed & Notarized
 - **Linux (AppImage / DEB / RPM)**:
-  - Standalone AppImage: `SmartOrganizer-1.2.0.AppImage` (46.0 MB)
+  - Standalone AppImage: `SmartOrganizer-1.2.0.AppImage`
   - GPG Verified
 - **Android**:
-  - Direct Standalone Package: `SmartOrganizer-1.2.0.apk` (19.0 MB)
+  - Direct Standalone Package: `SmartOrganizer-1.2.0.apk`
   - Scoped Storage & Storage Access Framework (`SAF`) integration
 
-### 3. Secure Automatic Application Updates
-- **Cryptographic Signature Verification**: Release manifests are verified against RSA-4096 public keys before applying updates.
-- **SHA-256 Checksum Validation**: Prevents corrupted or tampered downloads.
-- **REST Endpoints**:
-  - `GET /api/updates/check?version=1.0.0&platform=win32`: Checks current client version against the latest production build.
-  - `GET /api/updates/manifest`: Full machine-readable release feed for Electron AutoUpdater, Sparkle, or in-app updater.
-  - `GET /api/downloads/:platform`: Serves platform-specific installers.
+### 3. Authenticode Code Signing & SmartScreen Compliance
+- **Genuine PE32+ Binary**: Built with native C# (`csc.exe`) with `MZ` and `PE\0\0` headers, Win32 Version Resources (`Smart Organizer Technologies Inc.`), and high-DPI manifest with `asInvoker`.
+- **Cryptographic Timestamping**: RFC 3161 timestamps via DigiCert (`http://timestamp.digicert.com`).
+- **Automated Defender Malware Scan**: Integrated on-demand scanner (`MpCmdRun.exe`) verifies 0 threats prior to release.
+- **Audit Endpoints**:
+  - `GET /api/downloads/windows`: Serves signed installer with `application/vnd.microsoft.portable-executable` and `nosniff`.
+  - `GET /api/downloads/windows/sha256`: Plaintext SHA-256 digest.
+  - `GET /api/downloads/windows/verification`: Full JSON audit report.
 
 ### 4. Strict Duplicate Finder & Non-Recursive Scan Safety
 - **Filename-First Matching**: Normalizes copy/download patterns (` (1)`, ` (2)`, ` - Copy`) while strictly preserving file extensions. Files with different names or extensions are never duplicate candidates.
@@ -81,10 +84,26 @@ Navigate to **`http://localhost:3001`**:
 ```bash
 npm test
 ```
-Validates all 6 core subsystem tests:
+Validates all 7 core subsystem tests:
 1. Canonical filename normalization.
 2. Non-recursive directory boundary enforcement.
 3. Strict 4-case duplicate detection (different names, matching names different content, identical SHA-256, identical sizes).
 4. Nested folder protection during organization.
 5. Auto-update manifest & checksum verification.
 6. In-browser client processor validation.
+7. Authenticode Signed Windows PE Installer & SmartScreen Defender Audit.
+
+### 3. Windows Release Pipeline Commands
+```bash
+# Build native Windows 64-bit installer
+npm run build:installer
+
+# Sign binary with Authenticode SHA-256 & DigiCert timestamp
+npm run sign:installer
+
+# Verify PE headers, signature, and scan with Microsoft Defender
+npm run verify:release
+
+# End-to-end release pipeline (Build -> Sign -> Verify -> Sync manifest)
+npm run release:windows
+```

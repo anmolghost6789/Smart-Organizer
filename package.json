@@ -10,7 +10,11 @@
     "build:client": "vite build",
     "build": "vite build",
     "start": "node server/index.js",
-    "test": "node tests/run-tests.js"
+    "test": "node tests/run-tests.js",
+    "build:installer": "powershell -ExecutionPolicy Bypass -File scripts/build-windows-installer.ps1",
+    "sign:installer": "powershell -ExecutionPolicy Bypass -File scripts/sign-binary.ps1",
+    "verify:release": "powershell -ExecutionPolicy Bypass -File scripts/verify-integrity.ps1",
+    "release:windows": "node scripts/release-windows.js"
   },
   "dependencies": {
     "cors": "^2.8.5",

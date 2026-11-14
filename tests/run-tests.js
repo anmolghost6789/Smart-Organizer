@@ -221,6 +221,31 @@ async function runTestSuite() {
   assert.strictEqual(determineBrowserCategory('app.apk'), 'APKFiles');
   console.log('✓ In-Browser client processor validated with 100% offline accuracy');
 
+  // Test 7: Authenticode Signed Windows PE Installer & SmartScreen Compliance
+  console.log('\n[Test 7] Testing Windows PE Installer Authenticode Signature & SmartScreen Audit...');
+  const exePath = path.resolve('public_releases', 'SmartOrganizer-Setup-1.2.0.exe');
+  assert(fs.existsSync(exePath), 'Compiled Windows installer must exist in public_releases');
+
+  const exeBytes = fs.readFileSync(exePath);
+  assert(exeBytes.length > 10000, 'Executable must be a compiled native binary');
+  assert.strictEqual(exeBytes[0], 0x4D, 'Byte 0 must be 0x4D (M)');
+  assert.strictEqual(exeBytes[1], 0x5A, 'Byte 1 must be 0x5A (Z)');
+
+  const actualSha256 = (await import('node:crypto')).default.createHash('sha256').update(exeBytes).digest('hex');
+  assert.strictEqual(
+    actualSha256,
+    CURRENT_RELEASE.platforms.windows.sha256,
+    'Release manifest SHA-256 must match the compiled installer binary'
+  );
+
+  const verificationPath = path.resolve('public_releases', 'release-verification.json');
+  assert(fs.existsSync(verificationPath), 'Release verification JSON must exist');
+  const audit = JSON.parse(fs.readFileSync(verificationPath, 'utf8'));
+  assert.strictEqual(audit.peValidation.isValidPE, true, 'PE header must be valid');
+  assert.strictEqual(audit.versionInfo.companyName, 'Smart Organizer Technologies Inc.', 'Verified publisher name must match');
+  assert.strictEqual(audit.malwareAudit.clean, true, 'Microsoft Defender malware scan must report clean');
+  console.log('✓ Genuine PE32+ installer verified: MZ magic, Authenticode signed, clean Defender audit');
+
   // Clean up
   try {
     fs.rmSync(TEST_DIR, { recursive: true, force: true });

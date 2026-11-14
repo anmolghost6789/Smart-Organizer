@@ -8,3 +8,6 @@ dist/
 test-vault/
 .DS_Store
 Thumbs.db
+certificates/*.pfx
+certificates/*.key
+

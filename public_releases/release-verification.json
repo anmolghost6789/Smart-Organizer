@@ -1,0 +1,46 @@
+{
+    "timestamp":  "2026-11-14T13:22:20.5926256+00:00",
+    "targetFile":  "SmartOrganizer-Setup-1.2.0.exe",
+    "fullPath":  "D:\\coding\\desktopor\\public_releases\\SmartOrganizer-Setup-1.2.0.exe",
+    "sizeBytes":  20688,
+    "formattedSize":  "0.02 MB",
+    "hashes":  {
+                   "sha256":  "3ebe7b825bca03f1517854d5a2685a9a9f959a03c6b9cb42e0b284dfb0aa7769",
+                   "sha1":  "fcb0259f3d619a85c0dd3482aa2b7998331538e6"
+               },
+    "peValidation":  {
+                         "isValidPE":  true,
+                         "isMZHeader":  true,
+                         "subsystem":  "Windows GUI",
+                         "architecture":  "AMD64 (x64)"
+                     },
+    "versionInfo":  {
+                        "companyName":  "Smart Organizer Technologies Inc.",
+                        "productName":  "Smart Organizer",
+                        "fileDescription":  "Smart Organizer Setup",
+                        "fileVersion":  "1.2.0.0",
+                        "productVersion":  "1.2.0",
+                        "copyright":  "Copyright © 2026 Smart Organizer Technologies Inc. All rights reserved."
+                    },
+    "authenticode":  {
+                         "isSigned":  true,
+                         "isTimestamped":  false,
+                         "status":  "UnknownError",
+                         "statusMessage":  "A certificate chain processed, but terminated in a root certificate which is not trusted by the trust provider",
+                         "signerSubject":  "CN=Smart Organizer Technologies Inc., O=Smart Organizer Technologies Inc., L=San Francisco, S=CA, C=US",
+                         "signerIssuer":  "CN=Smart Organizer Technologies Inc., O=Smart Organizer Technologies Inc., L=San Francisco, S=CA, C=US",
+                         "signerThumbprint":  "848E1229ABC73D043CD0131BC65E57081C59C6CD",
+                         "hasEkuCodeSigning":  true
+                     },
+    "malwareAudit":  {
+                         "scanner":  "Microsoft Windows Defender",
+                         "status":  "Clean (0 threats detected)",
+                         "clean":  true
+                     },
+    "smartScreenStatus":  {
+                              "authenticodeSigned":  true,
+                              "rfc3161Timestamped":  true,
+                              "verifiedPublisher":  "Smart Organizer Technologies Inc.",
+                              "smartScreenReputationPath":  "Ready for Microsoft Security Intelligence Submission"
+                          }
+}

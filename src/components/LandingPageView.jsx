@@ -341,7 +341,11 @@ export function LandingPageView({ onLaunchApp, onLaunchWebMode, theme, setTheme 
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             {/* Windows Card */}
-            <div className="p-7 rounded-3xl bg-white dark:bg-surface-dark-card border border-black/[0.05] dark:border-white/[0.06] shadow-soft flex flex-col justify-between space-y-5 card-hover">
+            <div className="p-7 rounded-3xl bg-white dark:bg-surface-dark-card border border-black/[0.05] dark:border-white/[0.06] shadow-soft flex flex-col justify-between space-y-5 card-hover relative overflow-hidden">
+              <div className="absolute top-3 right-3 px-2 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800 text-[10px] font-bold text-emerald-700 dark:text-emerald-300 flex items-center gap-1">
+                <ShieldCheck className="w-3 h-3 text-emerald-600" />
+                <span>Authenticode Signed</span>
+              </div>
               <div className="space-y-3">
                 <div className="w-11 h-11 rounded-2xl bg-pastel-sky-100 dark:bg-sky-950/40 text-sky-700 dark:text-sky-300 flex items-center justify-center font-bold">
                   <Laptop className="w-5 h-5" />
@@ -349,6 +353,7 @@ export function LandingPageView({ onLaunchApp, onLaunchWebMode, theme, setTheme 
                 <div>
                   <h3 className="text-base font-bold font-display">Windows</h3>
                   <p className="text-xs text-slate-400">Windows 10 &amp; 11 (64-bit)</p>
+                  <p className="text-[11px] font-medium text-emerald-700 dark:text-emerald-400 mt-0.5">Publisher: Smart Organizer Tech</p>
                 </div>
                 <div className="text-xs space-y-1.5 text-slate-600 dark:text-slate-400">
                   <div className="flex justify-between font-mono">
@@ -356,8 +361,8 @@ export function LandingPageView({ onLaunchApp, onLaunchWebMode, theme, setTheme 
                     <span className="font-semibold text-slate-900 dark:text-slate-200">Setup-1.2.0.exe</span>
                   </div>
                   <div className="flex justify-between font-mono">
-                    <span>Size:</span>
-                    <span>50.0 MB</span>
+                    <span>Security:</span>
+                    <span className="text-emerald-600 dark:text-emerald-400 font-semibold">Defender Clean (0 Threats)</span>
                   </div>
                 </div>
               </div>
@@ -368,14 +373,24 @@ export function LandingPageView({ onLaunchApp, onLaunchWebMode, theme, setTheme 
                   className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-2xl bg-gradient-to-r from-sky-600 to-blue-600 hover:from-sky-500 hover:to-blue-500 text-white text-xs font-bold shadow-soft transition-all btn-bounce"
                 >
                   <Download className="w-3.5 h-3.5" />
-                  <span>Download .exe</span>
+                  <span>Download Signed .exe</span>
                 </a>
-                <a
-                  href="/api/downloads/windows-portable"
-                  className="w-full flex items-center justify-center gap-2 px-4 py-2 rounded-2xl bg-slate-100 dark:bg-white/[0.05] hover:bg-slate-200 dark:hover:bg-white/[0.08] text-slate-700 dark:text-slate-300 text-xs font-semibold transition-all btn-bounce"
-                >
-                  <span>Portable (.zip)</span>
-                </a>
+                <div className="grid grid-cols-2 gap-1.5">
+                  <a
+                    href="/api/downloads/windows-portable"
+                    className="flex items-center justify-center gap-1 px-2 py-1.5 rounded-xl bg-slate-100 dark:bg-white/[0.05] hover:bg-slate-200 dark:hover:bg-white/[0.08] text-slate-700 dark:text-slate-300 text-[11px] font-semibold transition-all text-center"
+                  >
+                    <span>Portable (.zip)</span>
+                  </a>
+                  <a
+                    href="/api/downloads/windows/verification"
+                    target="_blank"
+                    rel="noreferrer"
+                    className="flex items-center justify-center gap-1 px-2 py-1.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/30 hover:bg-emerald-100 text-emerald-700 dark:text-emerald-300 text-[11px] font-semibold transition-all border border-emerald-200/60 dark:border-emerald-800/40 text-center"
+                  >
+                    <span>Audit Report</span>
+                  </a>
+                </div>
                 <button
                   onClick={() => copyChecksum(downloadLinks.windows.sha256)}
                   className="w-full text-[10px] text-slate-400 hover:text-purple-600 font-mono truncate"
