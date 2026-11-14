@@ -9,7 +9,7 @@ import { extractImageMetadata, classifyPhoto } from './photoManager.js';
 import { getDocumentPreview, classifyDocument } from './documentManager.js';
 import { classifyInstaller, isProtectedSystemPath } from './installerManager.js';
 
-// Ignore directories that cause infinite recursion, bloat, or lock issues
+// Ignore directories and system caches
 const IGNORED_DIRECTORY_NAMES = new Set([
   '$recycle.bin',
   'system volume information',
@@ -28,7 +28,6 @@ export class DirectoryScanner extends EventEmitter {
   constructor(options = {}) {
     super();
     this.options = {
-      maxDepth: 100,
       computeDuplicates: true,
       computePerceptual: true,
       customRules: [],
@@ -58,7 +57,12 @@ export class DirectoryScanner extends EventEmitter {
     this.emit('resumed');
   }
 
-  async scan(rootDirectory) {
+  /**
+   * Scans target folder(s).
+   * Strict Safety Rule: Never recursively scan inside subfolders!
+   * Only inspects files directly inside the folder(s) selected by the user.
+   */
+  async scan(targetInput) {
     this.startTime = Date.now();
     this.isCancelled = false;
     this.isPaused = false;
@@ -67,22 +71,35 @@ export class DirectoryScanner extends EventEmitter {
     this.processedFiles = 0;
     this.processedBytes = 0;
 
-    const normalizedRoot = path.resolve(rootDirectory);
-    if (!fs.existsSync(normalizedRoot)) {
-      throw new Error(`Directory does not exist: ${rootDirectory}`);
+    const targets = Array.isArray(targetInput) ? targetInput : [targetInput];
+    const normalizedRoots = [];
+
+    for (const root of targets) {
+      if (!root) continue;
+      const normalized = path.resolve(root);
+      if (!fs.existsSync(normalized)) {
+        throw new Error(`Directory does not exist: ${root}`);
+      }
+      if (isProtectedSystemPath(normalized)) {
+        throw new Error(`Scanning protected operating system root is prohibited for safety: ${root}`);
+      }
+      normalizedRoots.push(normalized);
     }
 
-    if (isProtectedSystemPath(normalizedRoot)) {
-      throw new Error(`Scanning protected operating system root is prohibited for safety: ${rootDirectory}`);
+    if (normalizedRoots.length === 0) {
+      throw new Error(`No valid target directories provided.`);
     }
 
-    this.emit('start', { root: normalizedRoot, time: this.startTime });
+    this.emit('start', { roots: normalizedRoots, time: this.startTime });
 
     const collectedFiles = [];
     const emptyFolders = [];
 
-    // Phase 1: Fast asynchronous directory traversal
-    await this._crawlDirectory(normalizedRoot, 0, collectedFiles, emptyFolders);
+    // Phase 1: Inspect ONLY direct files inside the selected folder(s)
+    for (const rootDir of normalizedRoots) {
+      if (this.isCancelled) return { cancelled: true, files: [] };
+      await this._inspectDirectFolder(rootDir, collectedFiles, emptyFolders);
+    }
 
     if (this.isCancelled) return { cancelled: true, files: [] };
 
@@ -126,7 +143,7 @@ export class DirectoryScanner extends EventEmitter {
         currentFile: chunk[chunk.length - 1]?.path
       });
 
-      // Yield event loop to avoid locking the thread
+      // Yield event loop
       await new Promise(r => setImmediate(r));
     }
 
@@ -148,36 +165,42 @@ export class DirectoryScanner extends EventEmitter {
     };
   }
 
-  async _crawlDirectory(dirPath, depth, collectedFiles, emptyFolders) {
-    if (this.isCancelled || depth > this.options.maxDepth) return;
+  /**
+   * Strictly inspects files directly inside dirPath.
+   * NEVER enters subdirectories or nested folders.
+   */
+  async _inspectDirectFolder(dirPath, collectedFiles, emptyFolders) {
+    if (this.isCancelled) return;
 
     let entries = [];
     try {
       entries = await fs.promises.readdir(dirPath, { withFileTypes: true });
     } catch (err) {
-      // Permission denied or inaccessible folder - skip safely
       return;
     }
 
-    let subFilesCount = 0;
+    let directFileCount = 0;
 
     for (const entry of entries) {
       if (this.isCancelled) return;
 
-      const fullPath = path.join(dirPath, entry.name);
       const lowerName = entry.name.toLowerCase();
-
-      // Skip ignored names
       if (IGNORED_DIRECTORY_NAMES.has(lowerName)) {
         continue;
       }
 
-      try {
-        if (entry.isDirectory()) {
-          await this._crawlDirectory(fullPath, depth + 1, collectedFiles, emptyFolders);
-        } else if (entry.isFile() || entry.isSymbolicLink()) {
+      // STRICT SAFETY RULE: Do NOT enter subfolders!
+      // Subdirectories inside the user's selected folder are NOT traversed.
+      if (entry.isDirectory()) {
+        continue;
+      }
+
+      // Collect ONLY direct files
+      if (entry.isFile() || entry.isSymbolicLink()) {
+        const fullPath = path.join(dirPath, entry.name);
+        try {
           const stats = await fs.promises.stat(fullPath);
-          subFilesCount++;
+          directFileCount++;
           collectedFiles.push({
             id: crypto.randomUUID(),
             path: fullPath,
@@ -187,13 +210,13 @@ export class DirectoryScanner extends EventEmitter {
             mtime: stats.mtime,
             extension: path.extname(entry.name).toLowerCase().replace(/^\./, '')
           });
+        } catch (err) {
+          // File deleted or inaccessible
         }
-      } catch (err) {
-        // Inaccessible or deleted during crawl
       }
     }
 
-    if (subFilesCount === 0 && entries.length === 0) {
+    if (directFileCount === 0 && entries.length === 0) {
       emptyFolders.push(dirPath);
     }
   }

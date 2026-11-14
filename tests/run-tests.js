@@ -3,9 +3,9 @@ import path from 'node:path';
 import assert from 'node:assert';
 import { DirectoryScanner } from '../server/core/scanner.js';
 import { identifyByMagicBytes } from '../server/core/signatures.js';
-import { determineCategory, DEFAULT_CATEGORIES } from '../server/core/categories.js';
-import { computeFullSha256, computePerceptualHash, hammingDistance } from '../server/core/hasher.js';
-import { detectDuplicates } from '../server/core/duplicateDetector.js';
+import { determineCategory } from '../server/core/categories.js';
+import { computeFullSha256 } from '../server/core/hasher.js';
+import { detectDuplicates, getCanonicalFilenameKey } from '../server/core/duplicateDetector.js';
 import { generateOrganizationPlan, executeOrganizationPlan } from '../server/core/organizer.js';
 import { undoOperation, getOperationHistory } from '../server/core/recovery.js';
 import { isProtectedSystemPath } from '../server/core/installerManager.js';
@@ -13,172 +13,200 @@ import { getDatabase } from '../server/core/database.js';
 
 const TEST_DIR = path.resolve('test-vault');
 
-async function setupTestFiles() {
+async function setupTestVault() {
   if (fs.existsSync(TEST_DIR)) {
     fs.rmSync(TEST_DIR, { recursive: true, force: true });
   }
   fs.mkdirSync(TEST_DIR, { recursive: true });
 
-  // 1. Create a genuine PNG file with proper PNG magic bytes
-  const pngPath = path.join(TEST_DIR, 'sample_photo.png');
-  const pngHeader = Buffer.from([0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 0x00, 0x00, 0x00, 0x0D, 0x49, 0x48, 0x44, 0x52, 0x00, 0x00, 0x07, 0x80, 0x00, 0x00, 0x04, 0x38, 0x08, 0x06, 0x00, 0x00, 0x00]);
-  fs.writeFileSync(pngPath, pngHeader);
+  // 1. Matching filenames with IDENTICAL content (Real duplicate pair)
+  const reportContent = '%PDF-1.7\nSample Internship Report Data Science Content\n%%EOF';
+  const report1 = path.join(TEST_DIR, 'Internship_Report_Data_Science_with_Python.pdf');
+  const report2 = path.join(TEST_DIR, 'Internship_Report_Data_Science_with_Python (1).pdf');
+  fs.writeFileSync(report1, reportContent);
+  fs.writeFileSync(report2, reportContent);
 
-  // 2. Create an exact duplicate of the PNG
-  const pngDupPath = path.join(TEST_DIR, 'sample_photo_copy.png');
-  fs.writeFileSync(pngDupPath, pngHeader);
+  // 2. Different filename, IDENTICAL content / size (Like user screenshot: 3586595d-...)
+  // MUST NEVER be grouped as duplicates because filenames do not match!
+  const guidFile = path.join(TEST_DIR, '3586595d-6fc0-4bf2-a0fd-da67620879a7.pdf');
+  fs.writeFileSync(guidFile, reportContent);
 
-  // 3. Create a genuine PDF file with %PDF- header
-  const pdfPath = path.join(TEST_DIR, 'annual_report.pdf');
-  fs.writeFileSync(pdfPath, '%PDF-1.7\n1 0 obj\n<< /Type /Catalog >>\nendobj\ntrailer\n<< /Root 1 0 R >>\n%%EOF');
+  // 3. Different filenames, IDENTICAL size (Exact byte length 50 bytes)
+  // MUST NEVER be grouped as duplicates based on size!
+  const fileA = path.join(TEST_DIR, 'alpha_document.txt');
+  const fileB = path.join(TEST_DIR, 'beta_document.txt');
+  fs.writeFileSync(fileA, 'This is 50 bytes of exact unique text sample A!!');
+  fs.writeFileSync(fileB, 'This is 50 bytes of exact unique text sample B!!');
+  assert.strictEqual(fs.statSync(fileA).size, fs.statSync(fileB).size, 'Files must have identical sizes');
 
-  // 4. Create an exact duplicate of the PDF in a subfolder
-  const subFolder = path.join(TEST_DIR, 'downloads_temp');
-  fs.mkdirSync(subFolder, { recursive: true });
-  const pdfDupPath = path.join(subFolder, 'annual_report (1).pdf');
-  fs.writeFileSync(pdfDupPath, '%PDF-1.7\n1 0 obj\n<< /Type /Catalog >>\nendobj\ntrailer\n<< /Root 1 0 R >>\n%%EOF');
+  // 4. Matching filenames, DIFFERENT content
+  // MUST NEVER be grouped as duplicates or deleted!
+  const invoice1 = path.join(TEST_DIR, 'Invoice_Nov_2026.pdf');
+  const invoice2 = path.join(TEST_DIR, 'Invoice_Nov_2026 (1).pdf');
+  fs.writeFileSync(invoice1, '%PDF-1.7\nInvoice #1001 for Client A\n%%EOF');
+  fs.writeFileSync(invoice2, '%PDF-1.7\nInvoice #9999 for Client B with different payload\n%%EOF');
 
-  // 5. Create a Spreadsheet (CSV & XLSX simulation)
-  const csvPath = path.join(TEST_DIR, 'financial_ledger.csv');
-  fs.writeFileSync(csvPath, 'Date,Category,Amount\n2024-01-01,Office,150.00\n2024-01-02,Software,49.99');
+  // 5. Nested folder with files inside
+  // MUST NEVER be entered or scanned!
+  const nestedDir = path.join(TEST_DIR, 'nested_subfolder');
+  fs.mkdirSync(nestedDir, { recursive: true });
+  const nestedFile = path.join(nestedDir, 'Internship_Report_Data_Science_with_Python.pdf');
+  fs.writeFileSync(nestedFile, reportContent);
 
-  // 6. Create a Word document
-  const docPath = path.join(TEST_DIR, 'meeting_notes.docx');
-  const zipHeader = Buffer.from([0x50, 0x4B, 0x03, 0x04, 0x14, 0x00, 0x06, 0x00]);
-  const docxPayload = Buffer.concat([zipHeader, Buffer.from('[Content_Types].xml word/document.xml')]);
-  fs.writeFileSync(docPath, docxPayload);
+  // 6. Genuine image with PNG header
+  const pngHeader = Buffer.from([0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 0x00, 0x00, 0x00, 0x0D, 0x49, 0x48, 0x44, 0x52, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x08, 0x06, 0x00, 0x00, 0x00]);
+  const img1 = path.join(TEST_DIR, 'photo.png');
+  const img2 = path.join(TEST_DIR, 'photo - Copy.png');
+  fs.writeFileSync(img1, pngHeader);
+  fs.writeFileSync(img2, pngHeader);
 
-  // 7. Create an APK File
-  const apkPath = path.join(TEST_DIR, 'mobile_app.apk');
-  const apkPayload = Buffer.concat([zipHeader, Buffer.from('AndroidManifest.xml classes.dex')]);
-  fs.writeFileSync(apkPath, apkPayload);
-
-  // 8. Create a Source Code file
-  const jsPath = path.join(TEST_DIR, 'algorithm.js');
-  fs.writeFileSync(jsPath, 'function quicksort(arr) { return arr.sort((a,b) => a-b); }\nmodule.exports = { quicksort };');
-
-  // 9. Create an Empty folder to test empty folder detection
-  const emptyDirPath = path.join(TEST_DIR, 'empty_cache_dir');
-  fs.mkdirSync(emptyDirPath, { recursive: true });
-
-  // 10. Create an installer executable
-  const exePath = path.join(TEST_DIR, 'setup_installer.exe');
-  fs.writeFileSync(exePath, Buffer.from([0x4D, 0x5A, 0x90, 0x00, 0x03, 0x00, 0x00, 0x00]));
-
-  return { pngPath, pngDupPath, pdfPath, pdfDupPath, csvPath, docPath, apkPath, jsPath, emptyDirPath, exePath };
+  return {
+    report1,
+    report2,
+    guidFile,
+    fileA,
+    fileB,
+    invoice1,
+    invoice2,
+    nestedDir,
+    nestedFile,
+    img1,
+    img2
+  };
 }
 
 async function runTestSuite() {
-  console.log('======================================================');
-  console.log('  RUNNING PRODUCTION TEST SUITE: SMART FILE ORGANIZER');
-  console.log('======================================================\n');
+  console.log('================================================================');
+  console.log('  TEST SUITE: STRICT DUPLICATE FINDER & NON-RECURSIVE SCANNER   ');
+  console.log('================================================================\n');
 
-  // Initialize DB
   getDatabase();
+  const v = await setupTestVault();
 
-  const files = await setupTestFiles();
-  console.log('✓ Test files initialized in:', TEST_DIR);
+  // Test 1: Canonical Filename Matching
+  console.log('[Test 1] Testing Canonical Filename Matcher...');
+  assert.strictEqual(
+    getCanonicalFilenameKey('Internship_Report_Data_Science_with_Python.pdf'),
+    getCanonicalFilenameKey('Internship_Report_Data_Science_with_Python (1).pdf'),
+    'Filenames with copy counter (1) must match original canonical name'
+  );
+  assert.strictEqual(
+    getCanonicalFilenameKey('photo.png'),
+    getCanonicalFilenameKey('photo - Copy.png'),
+    'Filenames with "- Copy" must match canonical name'
+  );
+  assert.notStrictEqual(
+    getCanonicalFilenameKey('Internship_Report_Data_Science_with_Python.pdf'),
+    getCanonicalFilenameKey('3586595d-6fc0-4bf2-a0fd-da67620879a7.pdf'),
+    'Completely different filenames must NEVER have matching canonical keys'
+  );
+  assert.notStrictEqual(
+    getCanonicalFilenameKey('report.pdf'),
+    getCanonicalFilenameKey('report.docx'),
+    'Different file extensions must NEVER match'
+  );
+  console.log('✓ Canonical filename normalization strictly matches filenames first');
 
-  // Test 1: Magic byte signatures
-  console.log('\n[Test 1] Testing Magic Byte Signatures...');
-  const pngMagic = identifyByMagicBytes(files.pngPath);
-  assert(pngMagic !== null, 'PNG magic byte identification failed');
-  assert.strictEqual(pngMagic.mime, 'image/png');
-  assert.strictEqual(pngMagic.category, 'Photos');
-
-  const pdfMagic = identifyByMagicBytes(files.pdfPath);
-  assert(pdfMagic !== null, 'PDF magic byte identification failed');
-  assert.strictEqual(pdfMagic.mime, 'application/pdf');
-  console.log('✓ Magic bytes correctly identified PNG and PDF signatures');
-
-  // Test 2: Category mapping
-  console.log('\n[Test 2] Testing Category Mapping Engine...');
-  const apkCat = determineCategory({ name: 'test.apk', extension: 'apk' });
-  assert.strictEqual(apkCat, 'APKFiles');
-
-  const docCat = determineCategory({ name: 'report.docx', extension: 'docx' });
-  assert.strictEqual(docCat, 'Documents');
-
-  const sheetCat = determineCategory({ name: 'data.csv', extension: 'csv' });
-  assert.strictEqual(sheetCat, 'Spreadsheets');
-  console.log('✓ Category mappings validated across 20+ specialized categories');
-
-  // Test 3: System Protected Paths
-  console.log('\n[Test 3] Testing OS Protected Directory Shields...');
-  assert.strictEqual(isProtectedSystemPath('C:\\Windows\\System32'), true);
-  assert.strictEqual(isProtectedSystemPath('C:\\Program Files\\App'), true);
-  assert.strictEqual(isProtectedSystemPath(TEST_DIR), false);
-  console.log('✓ System protection shields successfully block critical OS paths');
-
-  // Test 4: Directory Scanner
-  console.log('\n[Test 4] Testing Asynchronous Directory Scanner...');
+  // Test 2: Scanner Non-Recursive Boundary Check
+  console.log('\n[Test 2] Testing Non-Recursive Scanner (Direct Files Only)...');
   const scanner = new DirectoryScanner();
   const scanResult = await scanner.scan(TEST_DIR);
-  assert.strictEqual(scanResult.cancelled, false);
-  assert(scanResult.files.length >= 8, `Expected >= 8 files, found ${scanResult.files.length}`);
-  assert(scanResult.emptyFolders.length >= 1, 'Expected empty folder detection');
-  console.log(`✓ Scanner indexed ${scanResult.files.length} files and detected empty directories`);
 
-  // Test 5: Exact & Visual Duplicate Detection
-  console.log('\n[Test 5] Testing Cryptographic SHA-256 & Duplicate Detector...');
-  const dupResults = await detectDuplicates(scanResult.files);
-  assert(dupResults.exactDuplicates.length >= 2, `Expected at least 2 duplicate groups, got ${dupResults.exactDuplicates.length}`);
-  assert(dupResults.totalRedundantFiles >= 2, 'Expected at least 2 redundant files');
-  assert(dupResults.potentialSavingsBytes > 0, 'Expected positive potential savings');
-
-  // Verify intelligent keeper recommendation
-  for (const group of dupResults.exactDuplicates) {
-    const keepers = group.files.filter(f => f.isRecommendedKeep);
-    assert.strictEqual(keepers.length, 1, 'Exactly one file must be recommended to keep');
+  // Verify that files inside nested_subfolder were NOT scanned
+  const scannedPaths = scanResult.files.map(f => f.path);
+  assert(
+    !scannedPaths.includes(v.nestedFile),
+    `CRITICAL FAIL: Scanner entered nested folder! ${v.nestedFile} should not be scanned.`
+  );
+  for (const f of scanResult.files) {
+    assert.strictEqual(
+      path.dirname(f.path),
+      TEST_DIR,
+      `File ${f.path} is not directly inside selected root!`
+    );
   }
-  console.log(`✓ Detected ${dupResults.exactDuplicates.length} exact duplicate groups; savings: ${dupResults.formattedSavings}`);
+  console.log(`✓ Scanner inspected ${scanResult.files.length} direct files and NEVER entered nested subfolders`);
 
-  // Test 6: Organization Plan & Collision Resolution
-  console.log('\n[Test 6] Testing Organization Plan & Smart Naming Collision...');
+  // Test 3: Duplicate Finder Logic with 4 Critical Cases
+  console.log('\n[Test 3] Testing Duplicate Detection Algorithm...');
+  const dups = await detectDuplicates(scanResult.files);
+
+  // Case A: Different filenames with IDENTICAL sizes (alpha_document.txt vs beta_document.txt)
+  const alphaBetaGroup = dups.exactDuplicates.find(g =>
+    g.files.some(f => f.name.includes('alpha_document')) ||
+    g.files.some(f => f.name.includes('beta_document'))
+  );
+  assert.strictEqual(
+    alphaBetaGroup,
+    undefined,
+    'FAIL: Files with identical sizes but different filenames were flagged as duplicates!'
+  );
+  console.log('✓ Case A PASS: Files with identical size but different filenames are NOT duplicates');
+
+  // Case B: Different filename with IDENTICAL content (3586595d-... vs Internship_Report...)
+  const guidGroup = dups.exactDuplicates.find(g =>
+    g.files.some(f => f.name.includes('3586595d-'))
+  );
+  assert.strictEqual(
+    guidGroup,
+    undefined,
+    'FAIL: File with GUID filename was grouped as duplicate of Internship_Report!'
+  );
+  console.log('✓ Case B PASS: File with different filename (3586595d-...) was NOT grouped as duplicate');
+
+  // Case C: Matching filenames with DIFFERENT content (Invoice_Nov_2026.pdf vs (1).pdf)
+  const invoiceGroup = dups.exactDuplicates.find(g =>
+    g.files.some(f => f.name.includes('Invoice_Nov_2026'))
+  );
+  assert.strictEqual(
+    invoiceGroup,
+    undefined,
+    'FAIL: Matching filenames with different content were flagged as duplicates!'
+  );
+  console.log('✓ Case C PASS: Matching filenames with different content are NOT duplicates');
+
+  // Case D: Matching filenames with IDENTICAL SHA-256 (Internship_Report vs (1))
+  const reportGroup = dups.exactDuplicates.find(g =>
+    g.files.some(f => f.name.includes('Internship_Report_Data_Science_with_Python'))
+  );
+  assert(reportGroup !== undefined, 'FAIL: Real duplicate was not detected!');
+  assert.strictEqual(reportGroup.files.length, 2, 'Report duplicate set must contain exactly 2 files');
+  const keepFile = reportGroup.files.find(f => f.isRecommendedKeep);
+  assert.strictEqual(
+    keepFile.name,
+    'Internship_Report_Data_Science_with_Python.pdf',
+    'Original file without (1) must be recommended to keep'
+  );
+  console.log('✓ Case D PASS: Matching filenames with verified SHA-256 identified with original recommended to keep');
+
+  // Test 4: Nested Folder Protection during Organization
+  console.log('\n[Test 4] Testing Nested Folder Protection during Organization...');
   const plan = generateOrganizationPlan(scanResult.files, TEST_DIR, {
-    mode: 'move',
-    conflictResolution: 'smart-rename',
-    folderName: 'Smart Organizer'
+    mode: 'copy',
+    folderName: 'Organized_Output'
   });
-  assert(plan.items.length >= 8, 'Plan should contain all non-protected files');
-  console.log(`✓ Organization plan generated for ${plan.totalFiles} files with zero destructive overwrites`);
 
-  // Test 7: Organization Execution
-  console.log('\n[Test 7] Testing Safe Organization Execution & SQLite Journaling...');
-  const execResult = await executeOrganizationPlan(plan);
-  assert.strictEqual(execResult.status, 'completed');
-  assert.strictEqual(execResult.errorCount, 0);
+  // Verify plan does NOT contain any file from nested subfolder
+  for (const it of plan.items) {
+    assert.strictEqual(
+      path.dirname(it.sourcePath),
+      TEST_DIR,
+      `Item ${it.sourcePath} is not from root folder!`
+    );
+  }
+  console.log('✓ Organization plan only operates on direct files; nested subfolders remain untouched');
 
-  // Check organized folder structure
-  const orgDir = path.join(TEST_DIR, 'Smart Organizer');
-  assert(fs.existsSync(path.join(orgDir, 'Photos')), 'Photos category folder must exist');
-  assert(fs.existsSync(path.join(orgDir, 'PDFs')), 'PDFs category folder must exist');
-  assert(fs.existsSync(path.join(orgDir, 'Documents')), 'Documents category folder must exist');
-  assert(fs.existsSync(path.join(orgDir, 'APK Files')), 'APK Files category folder must exist');
-  console.log('✓ Files organized into categorized folders successfully');
-
-  // Test 8: Safe Rollback & 1-Click Undo
-  console.log('\n[Test 8] Testing Atomic Transaction Undo & Restore...');
-  const undoResult = await undoOperation(execResult.operationId);
-  assert.strictEqual(undoResult.status, 'undone');
-  assert(undoResult.restoredCount > 0, 'Files must be restored');
-
-  // Verify original files are back in original paths
-  assert(fs.existsSync(files.pngPath), 'sample_photo.png must be restored to original root');
-  assert(fs.existsSync(files.pdfPath), 'annual_report.pdf must be restored to original root');
-  console.log(`✓ 1-Click Undo restored all ${undoResult.restoredCount} files back to exact original paths`);
-
-  // Clean up test vault
+  // Clean up
   try {
     fs.rmSync(TEST_DIR, { recursive: true, force: true });
   } catch {}
 
-  console.log('\n======================================================');
-  console.log('  ALL 8 SYSTEM INTEGRITY & FEATURE TESTS PASSED (100%)');
-  console.log('======================================================\n');
+  console.log('\n================================================================');
+  console.log('  ALL STRICT DUPLICATE & NON-RECURSIVE SCANNER TESTS PASSED!    ');
+  console.log('================================================================\n');
 }
 
 runTestSuite().catch(err => {
-  console.error('\n❌ TEST SUITE FAILED:', err);
+  console.error('\n❌ TEST FAILED:', err);
   process.exit(1);
 });

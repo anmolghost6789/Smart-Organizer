@@ -8,6 +8,7 @@ import { generateOrganizationPlan, executeOrganizationPlan } from '../core/organ
 import { getOperationHistory, undoOperation } from '../core/recovery.js';
 import { DEFAULT_CATEGORIES } from '../core/categories.js';
 import { getDatabase } from '../core/database.js';
+import { isProtectedSystemPath } from '../core/installerManager.js';
 
 export function createApiRouter(wsBroadcast) {
   const router = express.Router();
@@ -235,7 +236,15 @@ export function createApiRouter(wsBroadcast) {
     for (const fPath of filePaths) {
       try {
         if (fs.existsSync(fPath)) {
+          if (isProtectedSystemPath(fPath)) {
+            continue; // Prohibit deleting protected system files
+          }
+
           const stats = fs.statSync(fPath);
+          if (stats.isDirectory()) {
+            continue; // Prohibit deleting directories
+          }
+
           const size = stats.size;
 
           if (moveToTrash) {
